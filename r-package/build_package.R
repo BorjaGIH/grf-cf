@@ -6,7 +6,7 @@
 # To prepare a CRAN build:
 #   `Rscript build_package.R --as-cran`
 
-setwd("C:/Users/72827837Q/Documents/grf-cf/r-package")
+setwd("/mnt/c/Users/72827837Q/Documents/grf-cf/r-package")
 
 args <- commandArgs(TRUE)
 library(Rcpp)
@@ -35,9 +35,12 @@ compileAttributes(package.name)
 clean_dll(package.name)
 build(package.name)
 
+
 # Test installation and run some smoke tests.
-install(package.name)
-library(package.name, character.only = TRUE)
+#install(package.name) # Long time spent here
+#install.packages("grf_2.3.0.tar.gz", repos = NULL, type ="source", Ncpus = 8)
+
+#library(package.name, character.only = TRUE)
 # Treat warnings as errors.
 #options(warn = 2)
 #test_package(package.name)
