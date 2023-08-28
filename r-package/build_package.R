@@ -44,7 +44,7 @@ build(package.name)
 
 # Test installation and run some smoke tests.
 #install(package.name) # Long time spent here
-#install.packages("grf_2.3.0.tar.gz", repos = NULL, type ="source", Ncpus = 8)
+install.packages("grf_2.3.0.tar.gz", repos = NULL, type ="source", Ncpus = 20)
 
 #library(package.name, character.only = TRUE)
 # Treat warnings as errors.
