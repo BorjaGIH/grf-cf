@@ -6,7 +6,7 @@
 # To prepare a CRAN build:
 #   `Rscript build_package.R --as-cran`
 
-setwd("/mnt/c/Users/72827837Q/Documents/grf-cf/r-package")
+setwd("/home/bvelasco/PhD/CausalSurvivalR/grf-cf/r-package")
 
 args <- commandArgs(TRUE)
 library(Rcpp)
