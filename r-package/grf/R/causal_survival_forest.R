@@ -332,11 +332,11 @@ causal_survival_forest <- function(X, Y, W, D,
                   "such that the probability of observing an event past the maximum follow-up time ",
                   "is at least M (i.e. P(T > horizon | X) > M)."))
   } else if (target == "survival.probability" && any(C.Y.hat <= 0.001)) {
-    warning(paste("HI, THIS IS BORJA HERE2! Estimated censoring probabilities go as low as:", round(min(C.Y.hat), 5),
+    warning(paste("HI, THIS IS BORJA HERE4! Estimated censoring probabilities go as low as:", round(min(C.Y.hat), 5),
                   "- forest estimates will likely be very unstable, a larger target `horizon`",
                   "is recommended."), immediate. = TRUE)
   } else if (target == "survival.probability" && any(C.Y.hat < 0.05)) {
-    warning(paste("HI, THIS IS BORJA HERE3! Estimated censoring probabilities are lower than 0.05",
+    warning(paste("HI, THIS IS BORJA HERE4! Estimated censoring probabilities are lower than 0.05",
                   "and forest estimates may not be stable. Using a smaller target `horizon`",
                   "may help."))
   }

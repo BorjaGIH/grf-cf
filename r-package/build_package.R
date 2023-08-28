@@ -33,6 +33,12 @@ if (!is.na(args[1]) && args[1] == "--as-cran") {
 # access to the library through RcppEigen.
 compileAttributes(package.name)
 clean_dll(package.name)
+
+if (file.exists("grf/.Rproj.user/F221601D/sources/session-8fec33b3/lock_file")) {
+  #Delete file if it exists
+  file.remove("grf/.Rproj.user/F221601D/sources/session-8fec33b3/lock_file")
+}
+
 build(package.name)
 
 
