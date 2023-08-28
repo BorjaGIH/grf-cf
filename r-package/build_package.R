@@ -23,7 +23,7 @@ if (!is.na(args[1]) && args[1] == "--as-cran") {
 }
 
 # Auto-generate documentation files
-#roxygen2::roxygenise(package.name) # gives an error about Rcmd.exe
+roxygen2::roxygenise(package.name)
 
 # Run Rcpp and build the package.
 # Symlinks in `grf/src` point to the Rcpp bindings (`grf/bindings`) and core C++ (`core/src`).
@@ -34,8 +34,8 @@ clean_dll(package.name)
 build(package.name)
 
 # Test installation and run some smoke tests.
-install(package.name) # gives a warning about dll copy permission.
+install(package.name)
 library(package.name, character.only = TRUE)
 # Treat warnings as errors.
-#options(warn = 2)
-#test_package(package.name)
+options(warn = 2)
+test_package(package.name)
