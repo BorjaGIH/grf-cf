@@ -151,6 +151,7 @@ causal_survival_forest <- function(X, Y, W, D,
                                    target = c("RMST", "survival.probability"),
                                    horizon = NULL,
                                    failure.times = NULL,
+                                   censoring_model = 'forest',
                                    num.trees = 2000,
                                    sample.weights = NULL,
                                    clusters = NULL,
@@ -219,6 +220,7 @@ causal_survival_forest <- function(X, Y, W, D,
                    "supplying a coarser grid with the `failure.times` argument. "), immediate. = TRUE)
   }
 
+  # Treatment propensity
   if (is.null(W.hat)) {
     forest.W <- regression_forest(X, W, num.trees = max(50, num.trees / 4),
                                   sample.weights = sample.weights, clusters = clusters,
@@ -308,20 +310,79 @@ causal_survival_forest <- function(X, Y, W, D,
   S.hat <- predict(sf.survival, failure.times = Y.grid)$predictions
 
   # The conditional survival function for the censoring process S_C(t, x, w).
-  sf.censor <- do.call(survival_forest, c(list(X = cbind(X, W), Y = Y, D = 1 - D), args.nuisance))
-  C.hat <- predict(sf.censor, failure.times = Y.grid)$predictions
+  if(censoring_model=='forest'){
+    # With a survival forest
+    print('censoring model: forest')
+    sf.censor <- do.call(survival_forest, c(list(X = cbind(X, W), Y = Y, D = 1 - D), args.nuisance))
+    C.hat <- predict(sf.censor, failure.times = Y.grid)$predictions
+    
+  } else if (censoring_model=='forest2'){
+    # With a simpler survival forest
+    print('censoring model: forest2')
+    # assert horizon<-max(failure.times)
+    sf.censor <- do.call(what=ranger, args=list(formula=Surv(time = Y, event = 1-D)~., data=cbind(X, W), mtry = mtry, importance = "permutation", splitrule = "extratrees") )
+    C.hat <- sf.censor$survival[, sapply(failure.times, function(x) which.min(abs(sf.censor$unique.death.times - x)))]
+                                         
+  } else if (censoring_model=='cox') {
+    # With a cox proportional hazards model
+    print('censoring model: cox')
+    D_<-1-D # revert "censored" and "observed"
+    Y_<-Y
+    sf.censor <- do.call(what=coxph, args=list(formula=Surv(time = Y_, event = D_)~., data=cbind(X, W)))
+            
+    # Predictions
+    C.hat <- matrix(NA, nrow = nrow(X), ncol = length(failure.times))
+    # Loop over failure.times
+    for (i in seq_along(failure.times)) {
+
+      # Create a vector with the timestep of the iteration
+      Y_ <- rep(failure.times[i], nrow(X))
+
+      # Predict
+      C.hat_i <- sf.censor %>% predict(as.data.frame(cbind(X,W)), type = "survival")
+
+      # Save the output to the result_matrix
+      C.hat[, i] <- C.hat_i
+    }
+    
+  } else if (censoring_model=='logreg') {
+    # With a simpler model: logistic regression. I am not computing a "survival to censoring" function, but the probability of censoring (binary) for each time.
+    stop("Modelling the censoring process with logistic regression not implemented")
+    #print('censoring model: logreg')
+    #D_<-1-D # revert "censored" and "observed"
+    #Y_<-Y
+    #sf.censor <- do.call(what=glm, args=list(formula=D_~., data=cbind(X,W,Y_,D_), family='binomial') )
+
+    # Predictions
+    #C.hat <- matrix(NA, nrow = nrow(X), ncol = length(failure.times))
+    # Loop over failure.times
+    #for (i in seq_along(failure.times)) {
+
+      # Create a vector with the timestep of the iteration
+      #Y_ <- rep(failure.times[i], nrow(X))
+
+      # Predict
+      #C.hat_i <- sf.censor %>% predict(as.data.frame(cbind(X,W,Y_)), type = "response")
+
+      # Save the output to the result_matrix
+      #C.hat[, i] <- C.hat_i
+    #}
+    # Invert columns so that the results have a survival sense. CHECK THIS.
+    #C.hat <- C.hat[, c(ncol(C.hat):1)]
+    
+  } else {
+    stop("Wrong censoring model: choose between 'forest', 'forest2', 'cox' or 'logreg'")
+  }
+    
   if (target == "survival.probability") {
     # Evaluate psi up to horizon
     D[Y > horizon] <- 1
     Y[Y > horizon] <- horizon
   }
-    
-  # Borja change
-  print(C.hat)
 
   Y.index <- findInterval(Y, Y.grid) # (invariance: Y.index > 0)
   C.Y.hat <- C.hat[cbind(seq_along(Y.index), Y.index)] # Pick out P[Ci > Yi | Xi, Wi]
-
+  
   if (target == "RMST" && any(C.Y.hat <= 0.05)) {
     warning(paste("Estimated censoring probabilities go as low as:", round(min(C.Y.hat), 5),
                   "- an identifying assumption is that there exists a fixed positive constant M",
@@ -343,9 +404,10 @@ causal_survival_forest <- function(X, Y, W, D,
                   "and forest estimates may not be stable. Using a smaller target `horizon`",
                   "may help."))
   }
+                                         
+  print(sum(C.Y.hat<0.05))
 
-  psi <- compute_psi(S.hat, C.hat, C.Y.hat, Y.hat, W.centered,
-                     D, fY, Y.index, Y.grid, target, horizon)
+  psi <- compute_psi(S.hat, C.hat, C.Y.hat, Y.hat, W.centered, D, fY, Y.index, Y.grid, target, horizon)
   validate_observations(psi[["numerator"]], X)
   validate_observations(psi[["denominator"]], X)
 
@@ -389,6 +451,7 @@ causal_survival_forest <- function(X, Y, W, D,
   forest[["has.missing.values"]] <- has.missing.values
   forest[["target"]] <- target
   forest[["horizon"]] <- horizon
+  forest[["C.Y.hat"]] <- C.Y.hat # Borja change
 
   forest
 }
